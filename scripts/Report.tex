@@ -1,0 +1,1025 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{5}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Mid-Senior Quantitative Analyst in FCP Model Validation Team \textbar{} SEB Vilnius - case study},
+  pdfauthor={Kristina Kazlauskaitė},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Mid-Senior Quantitative Analyst in FCP Model Validation Team
+\textbar{} SEB Vilnius - case study}
+\author{Kristina Kazlauskaitė}
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+\section{1. Data understanding and
+manipulation}\label{data-understanding-and-manipulation}
+
+\subsection{1.1 Data sources and
+structure}\label{data-sources-and-structure}
+
+Two files were provided:
+
+\texttt{alerts.xlsx} - 10,177 rows x 14 columns, one row per TM alert,
+combining three logical layers: the 1st-line alert (\texttt{AlertType},
+\texttt{AlertState}, \texttt{DateCreated}, \texttt{DateClosed}), the
+2nd-line case investigation, populated only when an alert is escalated
+(\texttt{CaseOpen}, \texttt{CaseClosed}, \texttt{CaseReported},
+\texttt{CaseState}), and customer attributes at the time of the alert
+(\texttt{PEP}, \texttt{CusRiskCategory}, \texttt{Type},
+\texttt{IndustryCode}).
+
+\texttt{additional\_info.xlsx} - a Metadata sheet defining each field,
+and an Industry Segment sheet mapping 33 industry codes to a risk
+segment (high risk / high risk cash intensive / staff intensive small
+company) and a numeric risk score.
+
+The dataset is best understood as a funnel: every row starts as an
+alert; a small subset escalates to a case; a smaller subset of those
+results in a SAR. The customer segment (\texttt{Type}) is the key
+structural split - Private Banking (individual clients) and LC\&FI
+(corporate/institutional clients) run different TM scenarios and
+populate different attribute fields, so the analysis below is cut by
+\texttt{Type} rather than pooled wherever it matters.
+
+\subsection{1.2 Data quality
+observations}\label{data-quality-observations}
+
+\begin{enumerate}
+\def\labelenumi{(\alph{enumi})}
+\tightlist
+\item
+  Inconsistent missing-value encoding
+\end{enumerate}
+
+45,319 cells in the raw file contain the literal text ``NULL'' rather
+than a blank cell, spread across \texttt{DateClosed}, \texttt{CaseOpen},
+\texttt{CaseClosed}, \texttt{CaseReported}, \texttt{CaseState},
+\texttt{PEP} and \texttt{CusRiskCategory.} Left unhandled, this would be
+read as a text category or block date parsing entirely. Both blank cells
+and the string ``NULL'' were mapped to true NA on import.
+
+\begin{enumerate}
+\def\labelenumi{(\alph{enumi})}
+\setcounter{enumi}{1}
+\tightlist
+\item
+  Duplicate records
+\end{enumerate}
+
+158 rows (79 distinct records) are complete duplicates of another row
+once the internal export index is ignored. These were removed, leaving
+10,098 unique alerts (6,267 LC\&FI / 3,831 Private Banking).
+
+\begin{enumerate}
+\def\labelenumi{(\alph{enumi})}
+\setcounter{enumi}{2}
+\tightlist
+\item
+  intID is not a reliable unique key
+\end{enumerate}
+
+Only 9,194 of 10,177 raw values of intID are unique (9.7\% collide).
+Investigation showed 904 of the 968 colliding groups pair one LC\&FI
+record with one Private Banking record - intID is assigned independently
+within each source system and simply overlaps when the two extracts are
+combined; on its own it carries no duplication risk. The remaining 64
+within-segment collisions were checked individually and are fully
+explained by the 79 exact-duplicate records in (b) - there is no case of
+two genuinely different alerts sharing the same ID within the same
+segment. Practical implication: intID should never be used as a join or
+dedup key without also qualifying by \texttt{Type.}
+
+\begin{enumerate}
+\def\labelenumi{(\alph{enumi})}
+\setcounter{enumi}{3}
+\tightlist
+\item
+  \texttt{CaseClosed} is never populated for SAR-filed cases
+\end{enumerate}
+
+All 47 SAR-filed alerts in the cleaned data have a missing
+\texttt{CaseClosed} timestamp - a systematic workflow gap rather than
+random missingness. This made the originally intended ``case-closed to
+SAR-reported'' cycle time unusable; \texttt{CaseOpen} to
+\texttt{CaseReported} was used as a substitute (Table 9).
+
+\subsection{1.3 Structural vs.~genuine
+missingness}\label{structural-vs.-genuine-missingness}
+
+Two fields are only ever populated for one customer segment and should
+not be read as data-quality gaps: \texttt{PEP} is populated only for
+Private Banking clients, and \texttt{IndustryCode} only for LC\&FI
+clients. Table 1 reports raw completeness; elsewhere in this report
+structural absence is separated from genuine gaps - e.g.~the 54 alerts
+with a blank CusRiskCategory, or the 938 Private Banking alerts with no
+PEP flag recorded despite PEP being applicable, which is worth raising
+with the data owner.
+
+\subsection{1.4 Assumptions}\label{assumptions}
+
+\begin{itemize}
+\item
+  An alert with no \texttt{CaseOpen} date is treated as never escalated
+  beyond 1st line, not as ``pending'' - reasonable given the data spans
+  2008-2021 and a genuinely open investigation from that period would
+  itself be an anomaly (checked for: none found).
+\item
+  ``Escalated'' = \texttt{CaseOpen} populated; ``SAR filed'' =
+  \texttt{CaseReported} populated - the cleanest available proxies for
+  2nd-line escalation and confirmed suspicious activity respectively.
+\item
+  Exact-duplicate records are treated as data-export artefacts and
+  removed, since a genuine repeat alert would be expected to carry a new
+  \texttt{DateCreated.}
+\item
+  The Industry Segment table is assumed static over the sample period
+  (no effective-dating supplied), so it is applied as a single lookup
+  rather than a time-varying attribute.
+\item
+  Rows closed for a stated data-quality reason (``Closed - Not
+  Investigated Data Quality'', 6 LC\&FI alerts) are kept in the base
+  population, since excluding them would understate true alert volume.
+\end{itemize}
+
+\begin{longtable}[]{@{}lrr@{}}
+\caption{Table 1. Field completeness}\tabularnewline
+\toprule\noalign{}
+Field & N\_missing & Pct\_missing \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Field & N\_missing & Pct\_missing \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+intID & 0 & 0.0 \\
+AlertType & 0 & 0.0 \\
+AlertState & 0 & 0.0 \\
+DateCreated & 0 & 0.0 \\
+DateClosed & 188 & 1.9 \\
+CaseOpen & 9921 & 98.2 \\
+CaseClosed & 9968 & 98.7 \\
+CaseReported & 10051 & 99.5 \\
+CaseState & 9921 & 98.2 \\
+PEP & 7205 & 71.4 \\
+CusRiskCategory & 54 & 0.5 \\
+Type & 0 & 0.0 \\
+IndustryCode & 7907 & 78.3 \\
+\end{longtable}
+
+\emph{Completeness by field. ``Structural'' = field is not applicable to
+that customer segment by design, not a data quality defect.}
+
+\begin{longtable}[]{@{}llr@{}}
+\caption{Table 2. Alert volume by customer segment}\tabularnewline
+\toprule\noalign{}
+Type & AlertType & n\_alerts \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Type & AlertType & n\_alerts \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+LC\&FI & Credit Cards & 1959 \\
+LC\&FI & Check Countries List & 1367 \\
+LC\&FI & Unusual behaviour & 843 \\
+LC\&FI & Cash & 637 \\
+LC\&FI & Listed High Risk Banks & 549 \\
+LC\&FI & Awakening Account & 270 \\
+LC\&FI & Close Monitoring & 184 \\
+LC\&FI & repayement of funds & 176 \\
+LC\&FI & PEP Monitoring & 168 \\
+LC\&FI & Unusual Cash Behaviour & 64 \\
+LC\&FI & Existing Accounts & 50 \\
+Private Banking & Unusual behaviour & 1711 \\
+Private Banking & New Destinations with high turnover & 1538 \\
+Private Banking & Existing Accounts & 220 \\
+Private Banking & Awakening Account & 159 \\
+Private Banking & Recurring In-Out scenario & 97 \\
+Private Banking & Check Countries List & 38 \\
+Private Banking & International Transfers & 34 \\
+Private Banking & PEP Monitoring & 28 \\
+Private Banking & Close Monitoring & 6 \\
+\end{longtable}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1600}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0900}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1200}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1600}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0600}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1900}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.2200}}@{}}
+\caption{Table 3. Alert -\textgreater{} Case -\textgreater{} SAR funnel,
+by segment}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_escalated
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+escalation\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_sar
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_escalated
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_escalated
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+escalation\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_sar
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_escalated
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+LC\&FI & 6267 & 143 & 0.0228179 & 45 & 0.0071805 & 0.3146853 \\
+Private Banking & 3831 & 34 & 0.0088750 & 2 & 0.0005221 & 0.0588235 \\
+Overall & 10098 & 177 & 0.0175282 & 47 & 0.0046544 & 0.2655367 \\
+\end{longtable}
+
+\emph{``SAR / Escalated'' is the conditional yield of an escalation -
+i.e.~once a case is opened, how often does it end in a SAR.}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1176}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.2647}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0662}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0882}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1176}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0441}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1397}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1618}}@{}}
+\caption{Table 4. Scenario-level productivity (Alert -\textgreater{}
+Case -\textgreater{} SAR), by segment}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+AlertType
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_escalated
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+escalation\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_sar
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_escalated
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+AlertType
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_escalated
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+escalation\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_sar
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate\_of\_escalated
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+LC\&FI & Credit Cards & 1959 & 78 & 0.0398162 & 27 & 0.0137825 &
+0.3461538 \\
+LC\&FI & Check Countries List & 1367 & 35 & 0.0256035 & 4 & 0.0029261 &
+0.1142857 \\
+LC\&FI & Unusual behaviour & 843 & 8 & 0.0094899 & 0 & 0.0000000 &
+0.0000000 \\
+LC\&FI & Cash & 637 & 14 & 0.0219780 & 11 & 0.0172684 & 0.7857143 \\
+LC\&FI & Listed High Risk Banks & 549 & 3 & 0.0054645 & 3 & 0.0054645 &
+1.0000000 \\
+LC\&FI & Awakening Account & 270 & 1 & 0.0037037 & 0 & 0.0000000 &
+0.0000000 \\
+LC\&FI & Close Monitoring & 184 & 0 & 0.0000000 & 0 & 0.0000000 & NA \\
+LC\&FI & repayement of funds & 176 & 2 & 0.0113636 & 0 & 0.0000000 &
+0.0000000 \\
+LC\&FI & PEP Monitoring & 168 & 0 & 0.0000000 & 0 & 0.0000000 & NA \\
+LC\&FI & Unusual Cash Behaviour & 64 & 0 & 0.0000000 & 0 & 0.0000000 &
+NA \\
+LC\&FI & Existing Accounts & 50 & 2 & 0.0400000 & 0 & 0.0000000 &
+0.0000000 \\
+Private Banking & Unusual behaviour & 1711 & 10 & 0.0058445 & 1 &
+0.0005845 & 0.1000000 \\
+Private Banking & New Destinations with high turnover & 1538 & 17 &
+0.0110533 & 0 & 0.0000000 & 0.0000000 \\
+Private Banking & Existing Accounts & 220 & 2 & 0.0090909 & 0 &
+0.0000000 & 0.0000000 \\
+Private Banking & Awakening Account & 159 & 0 & 0.0000000 & 0 &
+0.0000000 & NA \\
+Private Banking & Recurring In-Out scenario & 97 & 0 & 0.0000000 & 0 &
+0.0000000 & NA \\
+Private Banking & Check Countries List & 38 & 5 & 0.1315789 & 1 &
+0.0263158 & 0.2000000 \\
+Private Banking & International Transfers & 34 & 0 & 0.0000000 & 0 &
+0.0000000 & NA \\
+Private Banking & PEP Monitoring & 28 & 0 & 0.0000000 & 0 & 0.0000000 &
+NA \\
+Private Banking & Close Monitoring & 6 & 0 & 0.0000000 & 0 & 0.0000000 &
+NA \\
+\end{longtable}
+
+\emph{Full scenario breakdown. ``n/a'' = zero escalations, so a
+conditional yield cannot be computed. See Section 3.2 for
+interpretation.}
+
+\begin{longtable}[]{@{}llrr@{}}
+\caption{Table 5. 1st-line alert disposition (AlertState), by
+segment}\tabularnewline
+\toprule\noalign{}
+Type & AlertState & n & pct \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Type & AlertState & n & pct \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+LC\&FI & Closed - Not Suspicious & 5326 & 85.0 \\
+LC\&FI & Closed - Not Investigated & 471 & 7.5 \\
+LC\&FI & Closed - Processed externally & 302 & 4.8 \\
+LC\&FI & Data Created & 147 & 2.3 \\
+LC\&FI & Unassigned & 9 & 0.1 \\
+LC\&FI & Closed - Not Investigated Data Quality & 6 & 0.1 \\
+LC\&FI & Assigned to Investigate & 3 & 0.0 \\
+LC\&FI & Under Investigation & 2 & 0.0 \\
+LC\&FI & Level 2 escalation & 1 & 0.0 \\
+Private Banking & Closed - Not Suspicious & 3752 & 97.9 \\
+Private Banking & Closed - Not Investigated & 38 & 1.0 \\
+Private Banking & Data Created & 34 & 0.9 \\
+Private Banking & Under Investigation & 4 & 0.1 \\
+Private Banking & Unassigned & 3 & 0.1 \\
+\end{longtable}
+
+\emph{``Closed - Not Investigated'' and ``Closed - Processed
+externally'' together account for 12.4\% of LC\&FI alerts (777 alerts)
+that were closed without a substantive 1st-line review - see Section
+3.3.}
+
+\begin{longtable}[]{@{}lrrr@{}}
+\caption{Table 6. Escalation / SAR rate by customer risk
+category}\tabularnewline
+\toprule\noalign{}
+CusRiskCategory\_clean & n\_alerts & escalation\_rate & sar\_rate \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+CusRiskCategory\_clean & n\_alerts & escalation\_rate & sar\_rate \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Medium Risk & 6942 & 0.0142610 & 0.0025929 \\
+Lower Risk & 1314 & 0.0197869 & 0.0038052 \\
+Higher Risk & 1161 & 0.0439276 & 0.0206718 \\
+Not Specified & 627 & 0.0015949 & 0.0000000 \\
+Unknown / not recorded & 54 & 0.0000000 & 0.0000000 \\
+\end{longtable}
+
+\begin{longtable}[]{@{}lrrr@{}}
+\caption{Table 7. Escalation / SAR rate by PEP status (Private Banking
+only)}\tabularnewline
+\toprule\noalign{}
+PEP\_clean & n\_alerts & escalation\_rate & sar\_rate \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+PEP\_clean & n\_alerts & escalation\_rate & sar\_rate \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Not PEP & 2776 & 0.0104467 & 0.0007205 \\
+PEP & 117 & 0.0170940 & 0.0000000 \\
+Unknown / not recorded & 938 & 0.0031983 & 0.0000000 \\
+\end{longtable}
+
+\emph{PEP sample size (117) is too small to draw firm conclusions - see
+Section 3.3.}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.5270}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1216}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2162}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1351}}@{}}
+\caption{Table 8. Escalation / SAR rate by industry risk segment (LC\&FI
+only)}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+IndustrySegment\_clean
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+escalation\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+IndustrySegment\_clean
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_alerts
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+escalation\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sar\_rate
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Other / not in high-risk industry list & 6188 & 0.0224628 & 0.0072721 \\
+high risk & 57 & 0.0701754 & 0.0000000 \\
+staff intensive small company & 22 & 0.0000000 & 0.0000000 \\
+\end{longtable}
+
+\emph{Flagged high-risk industries escalate 3x more often but produced
+zero SARs in this sample (n=57) - see Section 3.3 on sample-size
+caveats.}
+
+\begin{longtable}[]{@{}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1330}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1232}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1182}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1281}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1182}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1379}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1281}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1133}}@{}}
+\caption{Table 9. Cycle times (days)}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedleft
+median\_days\_to\_alert\_close
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+mean\_days\_to\_alert\_close
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p90\_days\_to\_alert\_close
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+median\_days\_case\_investig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+mean\_days\_case\_investig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+median\_days\_close\_to\_report
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+mean\_days\_close\_to\_report
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_negative\_cycle\_times
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedleft
+median\_days\_to\_alert\_close
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+mean\_days\_to\_alert\_close
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p90\_days\_to\_alert\_close
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+median\_days\_case\_investig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+mean\_days\_case\_investig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+median\_days\_close\_to\_report
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+mean\_days\_close\_to\_report
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_negative\_cycle\_times
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+4 & 31.7 & 103 & 0.1137635 & 237.2 & NA & NA & 0 \\
+\end{longtable}
+
+\emph{``Case opened -\textgreater{} Case closed'' mean is inflated by a
+cluster of \textasciitilde10+ cases sitting at 1,153-1,155 days
+(\textasciitilde3.2 years) with near-identical durations - consistent
+with a backlog of aged cases being cleared in one batch rather than
+measurement error. Median-based figures are more representative of
+typical processing time.}
+
+\section{2. Data Visualisation}\label{data-visualisation}
+
+\subsection{2.1 Alert volume by scenario and over
+time}\label{alert-volume-by-scenario-and-over-time}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 1: Alert volume by TM scenario.}]{r here("figures", "F1_volume_by_scenario.png")}}
+\caption{Figure 1: Alert volume by TM scenario.}
+\end{figure}
+
+Volume is highly concentrated: the top 4 scenarios (Unusual behaviour,
+Credit Cards, New Destinations with high turnover, Check Countries List)
+account for roughly 68\% of all alerts. The scenario mix barely overlaps
+between segments - only Unusual behaviour, Existing Accounts, Check
+Countries List, Awakening Account, and PEP Monitoring / Close Monitoring
+run in both, and even then with very different relative volumes. This
+confirms the two segments should be evaluated as separate TM models, not
+pooled.
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 2: Monthly trend.}]{r here("figures", "F2_monthly_trend.png")}}
+\caption{Figure 2: Monthly trend.}
+\end{figure}
+
+Volumes are volatile with several sharp, short-lived spikes (e.g.~LC\&FI
+in mid-2009 and mid-2015) that look more like one-off batch events (a
+rule re-run, a scenario back-test, or a system migration) than organic
+growth. LC\&FI volume was consistently higher and more volatile than
+Private Banking until around 2019-2020, when Private Banking volume
+increased and LC\&FI's dropped - worth confirming with the business
+whether this reflects a genuine change in scenario tuning, thresholds,
+or client-base composition around that time.
+
+\subsection{2.2 The alert funnel}\label{the-alert-funnel}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 3: Alert funnel.}]{r here("figures", "F3_funnel.png")}}
+\caption{Figure 3: Alert funnel.}
+\end{figure}
+
+On a log scale, each stage of the funnel drops by roughly one order of
+magnitude. This shape is typical of rule-based TM - the vast majority of
+alerts are closed at 1st line without escalation - and is not itself a
+red flag; the question a validator should ask is whether the size of the
+drop-off is appropriate for the scenario, which Figure 4 addresses
+directly.
+
+\subsection{2.3 Scenario productivity}\label{scenario-productivity}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 4: Scenario productivity.}]{r here("figures", "F4_scenario_yield_scatter.png")}}
+\caption{Figure 4: Scenario productivity.}
+\end{figure}
+
+This is the most decision-relevant chart in the report. Scenarios
+cluster in the bottom-left (low escalation, low SAR rate - the
+majority), with a handful of standouts: Cash and Credit Cards combine
+meaningful volume with a comparatively high SAR rate; Check Countries
+List (Private Banking) has by far the highest escalation rate (13.2\%)
+but is low-volume (38 alerts) and its single SAR result should be read
+cautiously. Scenarios sitting on the x-axis with zero height
+(e.g.~Unusual behaviour LC\&FI, New Destinations with high turnover)
+escalate regularly but have never converted to a SAR - see Section 3.2
+for what that implies for tuning.
+
+\subsection{2.4 Risk-based
+discrimination}\label{risk-based-discrimination}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 5: SAR rate by risk.}]{r here("figures", "F5_sar_rate_by_risk_category.png")}}
+\caption{Figure 5: SAR rate by risk.}
+\end{figure}
+
+SAR rate increases with customer risk category, roughly 8x higher for
+Higher Risk than for Medium Risk. This is a genuinely encouraging
+validation signal: whatever combination of KYC risk scoring and TM rules
+is in place, it is - on this metric at least - correctly concentrating
+true positives among higher-risk customers rather than spreading them
+evenly.
+
+\subsection{2.5 First-line disposition and cycle
+times}\label{first-line-disposition-and-cycle-times}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 6: Alert disposition.}]{r here("figures", "F6_alertstate_composition.png")}}
+\caption{Figure 6: Alert disposition.}
+\end{figure}
+
+Private Banking alerts are closed as ``Not Suspicious'' almost uniformly
+(97.9\%). LC\&FI shows more variety, including the 12.4\% closed as
+``Not Investigated'' or ``Processed externally'' flagged in Table 5 -
+alerts that received no substantive first-line review, which matters for
+how confidently ``closed, not suspicious'' can be read as a true
+negative in any later false-negative analysis.
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 7: Time to close.}]{r here("figures", "F7_cycle_time_alert_close.png")}}
+\caption{Figure 7: Time to close.}
+\end{figure}
+
+Both segments show the expected shape - most alerts closed within days -
+but with a long tail extending to 100+ days, and a distinct secondary
+bump around 130-140 days for LC\&FI that likely corresponds to the same
+aged-case clearance pattern noted in Table 9.
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Figure 8: Yield trend.}]{r here("figures", "F8_yield_trend.png")}}
+\caption{Figure 8: Yield trend.}
+\end{figure}
+
+Neither rate shows a stable trend - both fluctuate year to year with a
+low point around 2020 (possibly volume or resourcing effects) and a
+recovery in 2021. Pre-2013 years were excluded as too sparse (annual
+volumes under 620 alerts) to produce a meaningful rate.
+
+\section{3. Additional analysis -- Transaction Monitoring validation
+perspective}\label{additional-analysis-transaction-monitoring-validation-perspective}
+
+\subsection{3.1 Analyses relevant to validating a rule-based TM
+model}\label{analyses-relevant-to-validating-a-rule-based-tm-model}
+
+A model validation of a rule-based TM system typically covers the
+following areas. Those marked (*) are illustrated with this dataset in
+Section 3.2; the rest would require data not available here
+(transaction-level detail, negative/below-the-line population, threshold
+parameters), and are flagged as such.
+
+\begin{itemize}
+\item
+  Conceptual soundness - do the scenarios map to documented, relevant
+  typologies for each customer segment, and is the logic (thresholds,
+  look-back windows, aggregation rules) reasonable given the segment's
+  risk profile?
+\item
+  Productivity / yield analysis (*) - alert volume, escalation rate, and
+  SAR conversion rate, overall and by scenario. This is the core
+  effectiveness metric and is covered in depth below.
+\item
+  Above-the-line / below-the-line (ATL/BTL) testing - sampling
+  transactions that fall just below a threshold (i.e.~would not have
+  alerted) to estimate the false-negative rate. Not possible here since
+  only already-generated alerts are provided, not the underlying
+  transaction population - see Section 3.3.
+\item
+  Threshold sensitivity / tuning analysis - re-running scenario logic at
+  different threshold values to trace out a volume-vs-yield curve and
+  identify an efficient operating point. Requires access to the
+  underlying transaction data and rule logic, not available here.
+\item
+  Segmentation and stability analysis (*) - does performance hold
+  consistently across customer segments, risk categories, PEP status,
+  industry, and over time, or does it concentrate in a few
+  sub-populations (which could indicate a scenario should be narrowed or
+  split)?
+\item
+  Data quality / input integrity review (*) - are the fields feeding the
+  rules complete, consistent, and correctly typed? Weaknesses here
+  directly undermine rule reliability regardless of how well-designed
+  the logic is.
+\item
+  Coverage / scenario-gap analysis - benchmarking the scenario library
+  against known typologies (e.g.~FATF guidance, peer institution
+  scenario libraries) to identify typologies with no corresponding rule
+  at all. Requires an external typology inventory, not available here.
+\item
+  Timeliness / process-efficiency review (*) - cycle times from alert to
+  closure and from case to reporting, since TM effectiveness includes
+  acting on true positives fast enough to be useful to the FIU.
+\item
+  Peer / regulatory benchmarking - comparing alert-to-SAR conversion
+  rates against industry peers or supervisory expectations. Not possible
+  without external benchmark data.
+\item
+  Independent testing / quality assurance sampling - periodic
+  2nd/3rd-line re-review of a sample of 1st-line ``closed, not
+  suspicious'' alerts to estimate the false-negative rate within the
+  alerted population itself (a cheaper partial substitute for full
+  ATL/BTL testing).
+\end{itemize}
+
+\subsection{3.2 What this data says about TM scenario
+performance}\label{what-this-data-says-about-tm-scenario-performance}
+
+\begin{itemize}
+\item
+  Overall productivity is low but not unusual for rule-based TM. A
+  1.75\% escalation rate and 0.47\% alert-to-SAR rate implies a
+  false-positive rate (at 1st line) north of 98\%. This is broadly
+  consistent with published industry experience for rule-based TM
+  (commonly cited false-positive rates are in the 90-98\%+ range), so on
+  its own this is not evidence of a poorly calibrated model - but it
+  does mean the model's practical value depends heavily on whether the
+  \textasciitilde2\% of alerts that do escalate are the right 2\%.
+\item
+  The risk-based signal is real (Table 6, Figure 5), but PEP and
+  Industry results should be read cautiously. SAR rate rising
+  monotonically with declared customer risk is a genuinely positive
+  validation finding. The PEP result (Table 7) and high-risk-industry
+  result (Table 8) point the opposite direction at first glance (PEP
+  alerts and high-risk-industry alerts escalate more but yield zero
+  SARs) - however, both are built on very small samples (117 and 57
+  alerts respectively) and zero SARs in a small sample is not strong
+  evidence of zero true underlying risk; this needs a larger sample
+  before it should influence rule design.
+\item
+  Scenario-level performance is highly uneven (Table 4, Figure 4). Eight
+  scenario/segment combinations (accounting for \textasciitilde740
+  alerts, 7.3\% of volume) never escalated a single alert across the
+  whole period - Close Monitoring, PEP Monitoring and Unusual Cash
+  Behaviour (LC\&FI), and Awakening Account, Recurring In-Out scenario,
+  International Transfers, PEP Monitoring and Close Monitoring (Private
+  Banking). A further six scenarios escalate regularly but have never
+  produced a SAR (Unusual behaviour and Awakening Account and repayement
+  of funds and Existing Accounts LC\&FI; New Destinations with high
+  turnover and Existing Accounts Private Banking - 32 escalations
+  combined with zero conversions). Both groups are natural candidates
+  for a threshold or logic review, discussed further in Section 3.4.
+\end{itemize}
+
+\subsection{3.3 Key limitations and
+risks}\label{key-limitations-and-risks}
+
+\begin{itemize}
+\item
+  No visibility into false negatives. The dataset only contains alerts
+  that were already generated. There is no way to estimate how much
+  suspicious activity exists in the transaction population but was never
+  flagged - the single biggest limitation for any TM validation and one
+  that cannot be resolved from alert data alone (see ATL/BTL testing,
+  Section 3.1).
+\item
+  No underlying transaction or threshold data. Without the transaction
+  amounts, counts, and rule parameters that generated each alert, it is
+  not possible to assess threshold calibration directly or simulate
+  ``what if'' tuning scenarios - only outcome rates can be observed, not
+  the mechanism producing them.
+\item
+  Small SAR sample size. 47 SAR-filed alerts total (2 of them Private
+  Banking) is a thin basis for statistically robust scenario-level
+  conclusions - several of the scenario-level yield figures in Table 4
+  are based on single-digit SAR counts and should be treated as
+  directional, not precise.
+\item
+  Unreviewed alert backlog. 12.4\% of LC\&FI alerts were closed without
+  a substantive 1st-line review (Table 5, Section 2.5). This weakens
+  confidence that the ``closed, not suspicious'' population is genuinely
+  a clean negative class - some unknown fraction of it may contain
+  unreviewed true positives.
+\item
+  Structural missingness limits comparability. PEP is only observed for
+  Private Banking and IndustryCode only for LC\&FI, so risk-driver
+  analysis cannot be run consistently across both segments with the same
+  variables.
+\item
+  Long, volatile historical span. The 2008-2021 window likely spans
+  multiple scenario logic revisions, threshold changes, and possibly
+  system migrations (Figure 2's spikes and step-changes are consistent
+  with this). Pooling across the full period risks averaging over
+  genuinely different model states; a validator would want the change
+  history to interpret trends correctly.
+\item
+  Data quality gaps identified in Section 1.2 (inconsistent NULL
+  encoding, the CaseClosed workflow gap, and the non-unique intID) would
+  each need remediation at source, since a validator relying on this
+  data for regulatory reporting or model performance attestation should
+  not have to first reverse-engineer these issues.
+\end{itemize}
+
+\subsection{3.4 Potential improvements to the current rule-based
+model}\label{potential-improvements-to-the-current-rule-based-model}
+
+\begin{itemize}
+\item
+  Retire or redesign zero-yield scenarios. The eight never-escalating
+  scenarios (Section 3.2) should be reviewed with the business: either
+  the underlying typology risk is genuinely very low for that segment
+  (in which case retire or lower priority), or the rule logic/threshold
+  is set too conservatively to ever trigger (in which case retune).
+  Either conclusion requires threshold/transaction data not available
+  here.
+\item
+  Investigate scenarios that escalate but never convert. The six
+  scenarios with escalations but zero SARs (32 combined escalations)
+  suggest the escalation threshold may be too loose relative to what
+  2nd-line investigators consider suspicious - worth a root-cause review
+  of a sample of those specific cases.
+\item
+  Close the unreviewed-alert gap. The 12.4\% of LC\&FI alerts closed
+  without substantive review (Table 5) is an operational risk as much as
+  a model one - it should be resourced down, or the reason coded
+  systematically (backlog vs.~genuine low-priority triage) so a
+  validator can distinguish the two going forward.
+\item
+  Move from static thresholds toward risk-weighted or dynamic
+  thresholds. Given the clear risk-based signal in Figure 5, thresholds
+  calibrated per customer-risk tier (rather than one threshold per
+  scenario applied uniformly) could plausibly reduce false positives for
+  Medium/Lower risk customers without giving up sensitivity for Higher
+  risk ones - this would need to be tested via threshold-sensitivity
+  analysis once transaction data is available.
+\item
+  Introduce systematic ATL/BTL and QA sampling. Regular sampling just
+  below alert thresholds, and periodic 2nd-line re-review of a sample of
+  ``closed, not suspicious'' 1st-line decisions, would give an estimate
+  of the false-negative rate that is currently completely unmeasured.
+\item
+  Fix the underlying data issues. Consistent NA encoding, a populated
+  CaseClosed field for SAR-filed cases, and a genuinely unique alert key
+  would materially reduce the effort (and risk of misinterpretation) in
+  every future validation cycle.
+\end{itemize}
+
+\subsection{3.5 Conceptual challenger model design and validation
+approach}\label{conceptual-challenger-model-design-and-validation-approach}
+
+\subsubsection{Design}\label{design}
+
+A practical challenger to a rule-based TM model does not need to be a
+single model - a staged approach is both more realistic to validate and
+easier to get comfortable with from a governance perspective:
+
+\begin{itemize}
+\item
+  Stage 1 - supervised risk-scoring model run in parallel (shadow mode).
+  Train a model (e.g.~gradient-boosted trees, or logistic regression as
+  an interpretable baseline) to predict P(SAR \textbar{} alert) using
+  features engineered from the same underlying transaction/customer data
+  that feeds the existing rules, plus features the current rules do not
+  use explicitly - e.g.~customer risk category, PEP status, industry
+  segment (already shown to carry signal in Section 3.2), account
+  tenure, alert recency/frequency for that customer, and network
+  features (see Stage 2). This directly targets the observed weakness:
+  the current rules treat scenarios independently and do not obviously
+  weight by customer risk.
+\item
+  Stage 2 - network/graph-based analytics as a complementary signal.
+  Rule-based scenarios are inherently single-customer,
+  single-transaction pattern detectors and structurally cannot see
+  multi-party layering or structuring across related accounts. A
+  graph-based anomaly layer (e.g.~flagging unusual counterparty
+  concentration, circular flows, or connections to already-SAR'd
+  entities) targets a typology gap the current model cannot see by
+  construction, rather than just re-scoring the same population.
+\item
+  Stage 3 - combine into a blended alert score / triage layer. Rather
+  than replacing the rules outright (which would require re-establishing
+  regulatory comfort from zero), use the challenger's score to triage
+  rule-based alerts - prioritising investigator time toward alerts the
+  model scores as high-likelihood, and potentially auto-closing or
+  batch-reviewing the lowest-scored tail with appropriate governance
+  sign-off. This keeps the rules as the auditable, explainable trigger
+  while using the challenger to address the productivity problem.
+\end{itemize}
+
+\subsubsection{Validation of the challenger against the existing
+model}\label{validation-of-the-challenger-against-the-existing-model}
+
+\begin{itemize}
+\item
+  Back-testing on historical alerts. Score every historical alert in
+  this dataset (or a hold-out period) with the challenger model and
+  compare its ranking against actual outcomes (escalated / SAR-filed).
+  Standard classifier metrics apply: AUROC/AUPRC (AUPRC particularly
+  relevant given the \textasciitilde0.5\% base rate), precision-recall
+  at plausible operating points, and calibration (does a ``70\% risk''
+  bucket actually convert to SAR \textasciitilde70\% of the time).
+\item
+  Champion-challenger overlap analysis. For a period run in shadow mode,
+  quantify: (i) the overlap between rule-flagged and challenger-flagged
+  populations, (ii) SARs captured by both vs.~only-rules
+  vs.~only-challenger, and (iii) whether the challenger would have
+  caught any of the historical SARs that came from scenarios with
+  otherwise poor conditional yield (Table 4) - this directly tests
+  whether the challenger adds coverage the rules miss, not just re-ranks
+  the same alerts.
+\item
+  False-negative estimation via sampling. Since the challenger, unlike
+  the rules, can score the full transaction population (not just
+  already-alerted transactions), it can be used to sample a
+  below-the-line population and have investigators review it - giving a
+  first real estimate of the rules' false-negative rate, which as noted
+  in Section 3.3 is currently unmeasured.
+\item
+  Stability and drift monitoring. Track score distributions, feature
+  drift, and conversion-rate-by-score-band over time (paralleling Figure
+  8 in this report) before any production reliance - Figure 8 shows the
+  existing rules already have volatile year-on-year yield, so the
+  challenger's stability bar should be at least as high, tested on
+  rolling windows rather than a single train/test split.
+\item
+  Governance and explainability sign-off. Given this is a
+  regulatory-facing control, model risk management would require:
+  documented feature rationale, sign-off from AML/compliance on
+  interpretability of the score (particularly if used to suppress or
+  auto-close alerts), fair-lending/bias testing across customer segments
+  (especially given PEP and risk-category are candidate features), and a
+  defined fallback if the challenger's data pipeline fails - the
+  existing rules would remain the control of record until the challenger
+  has a sufficient validated track record to justify a formal
+  champion-challenger swap.
+\end{itemize}
+
+\end{document}

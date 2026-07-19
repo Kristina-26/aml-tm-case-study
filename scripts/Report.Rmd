@@ -1,0 +1,232 @@
+---
+title: "Mid-Senior Quantitative Analyst in FCP Model Validation Team | SEB Vilnius
+  - case study"
+author: "Kristina Kazlauskaitė"
+date: "July 2026"
+output:
+  word_document:
+    toc: true
+    toc_depth: '2'
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  out.width = "80%"
+)
+library(knitr)
+library(here)
+```
+
+# 1. Data understanding and manipulation
+
+## 1.1 Data sources and structure
+
+Two files were provided:
+
+- `alerts.xlsx`: 10,177 rows x 14 columns, containing 1st-line alert data, 2nd-line case investigation data, and customer attributes.
+
+- `additional_info.xlsx`: Metadata and Industry Segment mappings.
+
+## 1.2 Data quality observations
+
+- Inconsistent missing-value encoding: "NULL" strings were mapped to true NA.
+
+- Duplicate records: 79 distinct records were duplicates and were removed.
+
+- `intID` reliability: `intID` collides across segments; it is not a globally unique key.
+
+- `CaseClosed` gap: This field is never populated for SAR-filed cases, a systematic workflow gap.
+
+## 1.4 Assumptions
+
+- An alert with no `CaseOpen` date is treated as never escalated beyond 1st line - reasonable given the data spans 2008-2021 and a genuinely open investigation from that period would itself be an anomaly (checked for: none found).
+
+- "Escalated" = `CaseOpen` populated; "SAR filed" = `CaseReported` populated.
+
+- Exact-duplicate records are treated as data-export artefacts and removed.
+
+- The Industry Segment table is assumed static over the sample period (no effective-dating supplied).
+
+- Rows closed for a stated data-quality reason ("Closed - Not Investigated Data Quality", 6 LC&FI alerts) are kept in the base population, since excluding them would understate true alert volume.
+
+```{r}
+t1 <- read.csv(here("output", "T1_completeness.csv"))
+kable(t1, caption = "Table 1. Field completeness")
+```
+*Completeness by field. "Structural" = field is not applicable to that customer segment by design, not a data quality defect.*
+
+```{r}
+t2 <- read.csv(here("output", "T2_volume_by_type_alerttype.csv"))
+kable(t2, caption = "Table 2. Alert volume by customer segment")
+```
+
+```{r}
+t3 <- read.csv(here("output", "T3_funnel_by_type.csv"))
+kable(t3, caption = "Table 3. Alert -> Case -> SAR funnel, by segment")
+```
+
+*"SAR / Escalated" is the conditional yield of an escalation - i.e. once a case is opened, how often does it end in a SAR.*
+
+```{r}
+t4 <- read.csv(here("output", "T4_scenario_yield.csv"))
+kable(t4, caption = "Table 4. Scenario-level productivity (Alert -> Case -> SAR), by segment")
+```
+
+*Full scenario breakdown. "n/a" = zero escalations, so a conditional yield cannot be computed. See Section 3.2 for interpretation.*
+
+```{r}
+t5 <- read.csv(here("output", "T5_alertstate_distribution.csv"))
+kable(t5, caption = "Table 5. 1st-line alert disposition (AlertState), by segment")
+```
+
+*"Closed - Not Investigated" and "Closed - Processed externally" together account for 12.4% of LC&FI alerts (777 alerts) that were closed without a substantive 1st-line review - see Section 3.3.*
+
+```{r}
+t6 <- read.csv(here("output", "T6_by_risk_category.csv"))
+kable(t6, caption = "Table 6. Escalation / SAR rate by customer risk category")
+```
+
+```{r}
+t7 <- read.csv(here("output", "T7_by_pep.csv"))
+kable(t7, caption = "Table 7. Escalation / SAR rate by PEP status (Private Banking only)")
+```
+
+*PEP sample size (117) is too small to draw firm conclusions - see Section 3.3.*
+
+```{r}
+t8 <- read.csv(here("output", "T8_by_industry_segment.csv"))
+kable(t8, caption = "Table 8. Escalation / SAR rate by industry risk segment (LC&FI only)")
+```
+
+*Flagged high-risk industries escalate 3x more often but produced zero SARs in this sample (n=57) - see Section 3.3 on sample-size caveats.*
+
+```{r}
+t9 <- read.csv(here("output", "T9_cycle_times.csv"))
+kable(t9, caption = "Table 9. Cycle times (days)")
+```
+
+*"Case opened -> Case closed" mean is inflated by a cluster of ~10+ cases sitting at 1,153-1,155 days (~3.2 years) with near-identical durations - consistent with a backlog of aged cases being cleared in one batch rather than measurement error. Median-based figures are more representative of typical processing time.*
+
+# 2. Data Visualisation
+
+## 2.1 Alert volume by scenario and over time
+
+![Figure 1: Alert volume by TM scenario.](r here("figures", "F1_volume_by_scenario.png"))
+
+
+Volume is highly concentrated: the top 4 scenarios account for roughly 68% of all alerts. This confirms the two segments should be evaluated as separate TM models.
+
+![Figure 2: Monthly trend.](r here("figures", "F2_monthly_trend.png"))
+
+Volumes are volatile with several sharp, short-lived spikes (e.g. LC&FI in mid-2009 and mid-2015) that look more like one-off batch events (a rule re-run, a scenario back-test, or a system migration) than organic growth. LC&FI volume was consistently higher and more volatile than Private Banking until around 2019-2020, when Private Banking volume increased and LC&FI's dropped - worth confirming with the business whether this reflects a genuine change in scenario tuning, thresholds, or client-base composition around that time.
+
+## 2.2 The alert funnel
+
+![Figure 3: Alert funnel.](r here("figures", "F3_funnel.png"))
+
+On a log scale, each stage of the funnel drops by roughly one order of magnitude.
+
+## 2.3 Scenario productivity
+
+![Figure 4: Scenario productivity.](r here("figures", "F4_scenario_yield_scatter.png"))
+
+This is the most decision-relevant chart. Scenarios cluster in the bottom-left, with a handful of standouts: Cash and Credit Cards combine meaningful volume with a comparatively high SAR rate. Check Countries List (Private Banking) has by far the highest escalation rate (13.2%) but is low-volume (38 alerts) and its single SAR result should be read cautiously. Scenarios sitting on the x-axis with zero height (e.g. Unusual behaviour LC&FI, New Destinations with high turnover) escalate regularly but have never converted to a SAR.
+
+## 2.4 Risk-based discrimination
+
+![Figure 5: SAR rate by risk.](r here("figures", "F5_sar_rate_by_risk_category.png"))
+
+SAR rate increases with customer risk category, roughly 8x higher for Higher Risk than for Medium Risk.
+
+## 2.5 First-line disposition and cycle times
+
+![Figure 6: Alert disposition.](r here("figures", "F6_alertstate_composition.png"))
+
+Private Banking alerts are closed as "Not Suspicious" almost uniformly (98%). LC&FI shows more variety, including the 12% closed as "Not Investigated" or "Processed externally".
+
+![Figure 7: Time to close.](r here("figures", "F7_cycle_time_alert_close.png"))
+
+Both segments show the expected shape - most alerts closed within days - but with a long tail extending to 100+ days, and a distinct secondary bump around 130-140 days for LC&FI that likely corresponds to the same aged-case clearance pattern noted earlier.
+
+![Figure 8: Yield trend.](r here("figures", "F8_yield_trend.png"))
+
+Neither rate shows a stable trend - both fluctuate year to year with a low point around 2020 (possibly volume effects) and a recovery in 2021. Pre-2013 years were excluded as too sparse (annual volumes under 600 alerts) to produce a meaningful rate.
+
+# 3. Additional analysis – Transaction Monitoring validation perspective
+
+## 3.1 Analyses relevant to validating a rule-based TM model
+
+- Conceptual soundness: Do scenarios map to relevant typologies and are logic/thresholds reasonable for the segment's risk profile?
+
+- Productivity/yield analysis (*): Alert volume, escalation rate, and SAR conversion rate, overall and by scenario. This is the core effectiveness metric.
+
+- Segmentation and stability analysis (*): Does performance hold consistently across segments, risk categories, and time, or is it concentrated in specific sub-populations?
+
+- Data quality/integrity review (*): Are input fields complete, consistent, and correctly typed? Poor data quality undermines even the best-designed logic.
+
+- Timeliness/process efficiency (*): Cycle times for alert closure and case reporting, as TM effectiveness relies on timely reporting to the FIU.
+
+- Other standard validation scope: Above/Below-the-line (ATL/BTL) testing, threshold sensitivity analysis, coverage gap analysis against typologies, peer benchmarking, and independent QA sampling.
+
+## 3.2 What this data says about TM scenario performance
+
+- Overall productivity is typical but low. A 1.75% escalation rate and 0.47% SAR-conversion rate implies a ~98% false-positive rate. This is consistent with industry standards for rule-based TM, but it confirms the model’s value depends entirely on the accuracy of the 2% that escalate.
+
+- Risk-based signal is validated. SAR rates rise monotonically with customer risk (Figure 5), confirming the existing risk-scoring effectively concentrates true positives in Higher Risk categories. Results for PEP and Industry segments are positive but inconclusive due to small sample sizes.
+
+- Scenario performance is highly uneven. Eight scenario/segment combinations never escalated a single alert; another six escalate regularly but yield zero SARs. Both groups represent "dead weight" scenarios that are natural candidates for tuning or retirement.
+
+## 3.3 Key limitations and risks
+
+- No visibility into false negatives. The dataset contains only generated alerts, preventing any measurement of the true false-negative rate or below-the-line (BTL) activity.
+
+- Data deficiencies. Missing transactional data, non-unique `intID` keys, inconsistent NULL encoding, and workflow gaps (unpopulated `CaseClosed` for SARs) complicate validation.
+
+- Sample and historical constraints. The small SAR sample (n=47) limits statistical robustness. Furthermore, the 2008-2021 window likely mixes multiple, undocumented model states, confounding long-term trend analysis.
+
+- Operational drag. 12.4% of LC&FI alerts were closed without substantive review, weakening confidence in the "Not Suspicious" label.
+
+## 3.4 Potential improvements to the current rule-based model
+
+- Retire or redesign zero-yield scenarios. Review the 14 identified zero-conversion or zero-escalation scenarios with the business to determine if they should be retired or retuned.
+
+- Operationalize QA. Address the unreviewed alert backlog to ensure the "Not Suspicious" class is a clean negative population.
+
+- Dynamic thresholding. Shift from static thresholds to risk-weighted tiers, utilizing the positive risk-discrimination signal identified in Figure 5 to preserve sensitivity for high-risk clients while reducing false positives for others.
+
+- Process controls. Implement systematic BTL sampling and standard QA reviews for 1st-line decisions to establish a measurable false-negative rate.
+
+- Remediate data quality. Address the inconsistent NULL encoding and workflow gaps at the source to improve data reliability for future regulatory reporting.
+
+## 3.5 Conceptual challenger model design and validation approach
+
+### Design
+
+- Stage 1 (Shadow Mode): Train a supervised risk-scoring model (e.g., Gradient Boosted Trees) to predict P(SAR | alert), using customer attributes, risk scores, and account velocity data.
+
+- Stage 2 (Network Analytics): Layer in graph-based anomaly detection to capture multi-party layering and structuring that rules cannot detect.
+
+- Stage 3 (Blended Triage): Use the challenger score to rank rule-based alerts, prioritizing investigator focus on high-likelihood alerts while potentially auto-closing the lowest-scored tail.
+
+### Validation of the challenger against the existing model
+
+- Back-testing: Use AUROC/AUPRC to compare challenger ranking against historical outcomes.
+
+- Champion-Challenger Overlap: Quantify SAR capture rates and whether the challenger identifies true positives that existing rules miss.
+
+- BTL Sampling: Use the challenger to score the transaction population to sample and review below-the-line transactions, establishing a baseline false-negative rate.
+
+- Governance: Implement stability/drift monitoring, bias testing across segments, and maintain the existing rules as the control of record until a successful shadow pilot is completed.
+
