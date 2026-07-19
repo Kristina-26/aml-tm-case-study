@@ -76,6 +76,8 @@ save_plot(p3, "F3_funnel")
 
 ## F4. Scenario "yield": escalation rate vs SAR rate, by AlertType
 
+library(ggrepel)
+
 f4_data <- alerts %>%
   group_by(Type, AlertType) %>%
   summarise(n_alerts = n(), escalation_rate = mean(escalated_to_case),
@@ -84,6 +86,10 @@ f4_data <- alerts %>%
 
 p4 <- ggplot(f4_data, aes(x = escalation_rate, y = sar_rate, size = n_alerts, color = Type)) +
   geom_point(alpha = 0.75) +
+  geom_text_repel(aes(label = AlertType), size = 3, color = "grey20",
+                   max.overlaps = Inf, seed = 1, show.legend = FALSE,
+                   min.segment.length = 0, segment.size = 0.3,
+                   box.padding = 0.4, point.padding = 0.3) +
   scale_x_continuous(labels = percent) +
   scale_y_continuous(labels = percent) +
   scale_color_manual(values = pal_type) +
@@ -92,7 +98,7 @@ p4 <- ggplot(f4_data, aes(x = escalation_rate, y = sar_rate, size = n_alerts, co
        subtitle = "Point size = alert volume. Scenarios in the top-right are the most productive",
        x = "Escalation rate (Alert -> Case)", y = "SAR rate (Alert -> SAR)",
        color = NULL, size = "Alert volume")
-save_plot(p4, "F4_scenario_yield_scatter")
+save_plot(p4, "F4_scenario_yield_scatter", w = 11, h = 8)
 
 ## F5. SAR rate by Customer Risk Category (risk-based discrimination)
 
