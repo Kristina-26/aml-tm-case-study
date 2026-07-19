@@ -63,58 +63,58 @@ Two files were provided:
 
 ```{r}
 t1 <- read.csv(here("output", "T1_completeness.csv"))
-kable(t1, caption = "Table 1. Field completeness")
+kable(t1, digits = 3, caption = "Table 1. Field completeness")
 ```
 *Completeness by field. "Structural" = field is not applicable to that customer segment by design, not a data quality defect.*
 
 ```{r}
 t2 <- read.csv(here("output", "T2_volume_by_type_alerttype.csv"))
-kable(t2, caption = "Table 2. Alert volume by customer segment")
+kable(t2, digits = 3, caption = "Table 2. Alert volume by customer segment")
 ```
 
 ```{r}
 t3 <- read.csv(here("output", "T3_funnel_by_type.csv"))
-kable(t3, caption = "Table 3. Alert -> Case -> SAR funnel, by segment")
+kable(t3, digits = 3, caption = "Table 3. Alert -> Case -> SAR funnel, by segment")
 ```
 
 *"SAR / Escalated" is the conditional yield of an escalation - i.e. once a case is opened, how often does it end in a SAR.*
 
 ```{r}
 t4 <- read.csv(here("output", "T4_scenario_yield.csv"))
-kable(t4, caption = "Table 4. Scenario-level productivity (Alert -> Case -> SAR), by segment")
+kable(t4, digits = 3, caption = "Table 4. Scenario-level productivity (Alert -> Case -> SAR), by segment")
 ```
 
 *Full scenario breakdown. "n/a" = zero escalations, so a conditional yield cannot be computed. See Section 3.2 for interpretation.*
 
 ```{r}
 t5 <- read.csv(here("output", "T5_alertstate_distribution.csv"))
-kable(t5, caption = "Table 5. 1st-line alert disposition (AlertState), by segment")
+kable(t5, digits = 3, caption = "Table 5. 1st-line alert disposition (AlertState), by segment")
 ```
 
 *"Closed - Not Investigated" and "Closed - Processed externally" together account for 12.4% of LC&FI alerts (777 alerts) that were closed without a substantive 1st-line review - see Section 3.3.*
 
 ```{r}
 t6 <- read.csv(here("output", "T6_by_risk_category.csv"))
-kable(t6, caption = "Table 6. Escalation / SAR rate by customer risk category")
+kable(t6, digits = 3, caption = "Table 6. Escalation / SAR rate by customer risk category")
 ```
 
 ```{r}
 t7 <- read.csv(here("output", "T7_by_pep.csv"))
-kable(t7, caption = "Table 7. Escalation / SAR rate by PEP status (Private Banking only)")
+kable(t7, digits = 3, caption = "Table 7. Escalation / SAR rate by PEP status (Private Banking only)")
 ```
 
 *PEP sample size (117) is too small to draw firm conclusions - see Section 3.3.*
 
 ```{r}
 t8 <- read.csv(here("output", "T8_by_industry_segment.csv"))
-kable(t8, caption = "Table 8. Escalation / SAR rate by industry risk segment (LC&FI only)")
+kable(t8, digits = 3, caption = "Table 8. Escalation / SAR rate by industry risk segment (LC&FI only)")
 ```
 
 *Flagged high-risk industries escalate 3x more often but produced zero SARs in this sample (n=57) - see Section 3.3 on sample-size caveats.*
 
 ```{r}
 t9 <- read.csv(here("output", "T9_cycle_times.csv"))
-kable(t9, caption = "Table 9. Cycle times (days)")
+kable(t9, digits = 3, caption = "Table 9. Cycle times (days)")
 ```
 
 *"Case opened -> Case closed" mean is inflated by a cluster of ~10+ cases sitting at 1,153-1,155 days (~3.2 years) with near-identical durations - consistent with a backlog of aged cases being cleared in one batch rather than measurement error. Median-based figures are more representative of typical processing time.*
