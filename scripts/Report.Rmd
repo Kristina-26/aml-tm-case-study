@@ -49,6 +49,10 @@ Two files were provided:
 
 - `CaseClosed` gap: This field is never populated for SAR-filed cases, a systematic workflow gap.
 
+## 1.3 Structural vs. genuine missingness
+
+Two fields are only ever populated for one customer segment and should not be read as data-quality gaps: PEP is populated only for Private Banking clients, and IndustryCode only for LC&FI clients. Table 1 reports raw completeness; elsewhere in this report structural absence is separated from genuine gaps - e.g. the 54 alerts with a blank CusRiskCategory, or the 938 Private Banking alerts with no PEP flag recorded despite PEP being applicable, which is worth raising with the data owner.
+
 ## 1.4 Assumptions
 
 - An alert with no `CaseOpen` date is treated as never escalated beyond 1st line - reasonable given the data spans 2008-2021 and a genuinely open investigation from that period would itself be an anomaly (checked for: none found).
