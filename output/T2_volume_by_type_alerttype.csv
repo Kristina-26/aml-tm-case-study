@@ -1,0 +1,21 @@
+Type,AlertType,n_alerts
+LC&FI,Credit Cards,1959
+LC&FI,Check Countries List,1367
+LC&FI,Unusual behaviour,843
+LC&FI,Cash,637
+LC&FI,Listed High Risk Banks,549
+LC&FI,Awakening Account,270
+LC&FI,Close Monitoring,184
+LC&FI,repayement of funds,176
+LC&FI,PEP Monitoring,168
+LC&FI,Unusual Cash Behaviour,64
+LC&FI,Existing Accounts,50
+Private Banking,Unusual behaviour,1711
+Private Banking,New Destinations with high turnover,1538
+Private Banking,Existing Accounts,220
+Private Banking,Awakening Account,159
+Private Banking,Recurring In-Out scenario,97
+Private Banking,Check Countries List,38
+Private Banking,International Transfers,34
+Private Banking,PEP Monitoring,28
+Private Banking,Close Monitoring,6

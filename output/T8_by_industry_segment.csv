@@ -1,0 +1,4 @@
+IndustrySegment_clean,n_alerts,escalation_rate,sar_rate
+Other / not in high-risk industry list,6188,0.022462831286360698,0.007272139625080802
+high risk,57,0.07017543859649122,0
+staff intensive small company,22,0,0

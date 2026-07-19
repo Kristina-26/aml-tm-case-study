@@ -1,0 +1,14 @@
+Field,N_missing,Pct_missing
+intID,0,0
+AlertType,0,0
+AlertState,0,0
+DateCreated,0,0
+DateClosed,188,1.9
+CaseOpen,9921,98.2
+CaseClosed,9968,98.7
+CaseReported,10051,99.5
+CaseState,9921,98.2
+PEP,7205,71.4
+CusRiskCategory,54,0.5
+Type,0,0
+IndustryCode,7907,78.3

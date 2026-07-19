@@ -1,0 +1,15 @@
+Type,AlertState,n,pct
+LC&FI,Closed - Not Suspicious,5326,85
+LC&FI,Closed - Not Investigated,471,7.5
+LC&FI,Closed - Processed externally,302,4.8
+LC&FI,Data Created,147,2.3
+LC&FI,Unassigned,9,0.1
+LC&FI,Closed - Not Investigated Data Quality,6,0.1
+LC&FI,Assigned to Investigate,3,0
+LC&FI,Under Investigation,2,0
+LC&FI,Level 2 escalation,1,0
+Private Banking,Closed - Not Suspicious,3752,97.9
+Private Banking,Closed - Not Investigated,38,1
+Private Banking,Data Created,34,0.9
+Private Banking,Under Investigation,4,0.1
+Private Banking,Unassigned,3,0.1

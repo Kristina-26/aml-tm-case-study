@@ -1,0 +1,21 @@
+Type,AlertType,n_alerts,n_escalated,escalation_rate,n_sar,sar_rate_of_alerts
+LC&FI,Credit Cards,1959,78,0.039816232771822356,27,0.013782542113323124
+LC&FI,Check Countries List,1367,35,0.025603511338697878,4,0.002926115581565472
+LC&FI,Unusual behaviour,843,8,0.009489916963226572,0,0
+LC&FI,Cash,637,14,0.02197802197802198,11,0.01726844583987441
+LC&FI,Listed High Risk Banks,549,3,0.00546448087431694,3,0.00546448087431694
+LC&FI,Awakening Account,270,1,0.003703703703703704,0,0
+LC&FI,Close Monitoring,184,0,0,0,0
+LC&FI,repayement of funds,176,2,0.011363636363636364,0,0
+LC&FI,PEP Monitoring,168,0,0,0,0
+LC&FI,Unusual Cash Behaviour,64,0,0,0,0
+LC&FI,Existing Accounts,50,2,0.04,0,0
+Private Banking,Unusual behaviour,1711,10,0.0058445353594389245,1,5.844535359438924e-4
+Private Banking,New Destinations with high turnover,1538,17,0.011053315994798439,0,0
+Private Banking,Existing Accounts,220,2,0.00909090909090909,0,0
+Private Banking,Awakening Account,159,0,0,0,0
+Private Banking,Recurring In-Out scenario,97,0,0,0,0
+Private Banking,Check Countries List,38,5,0.13157894736842105,1,0.02631578947368421
+Private Banking,International Transfers,34,0,0,0,0
+Private Banking,PEP Monitoring,28,0,0,0,0
+Private Banking,Close Monitoring,6,0,0,0,0
