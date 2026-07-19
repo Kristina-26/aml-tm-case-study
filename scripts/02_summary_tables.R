@@ -65,6 +65,12 @@ t4 <- alerts %>%
     escalation_rate = mean(escalated_to_case),
     n_sar = sum(sar_filed),
     sar_rate_of_alerts = mean(sar_filed),
+    # Conditional yield: of the alerts THIS scenario escalated to a case,
+    # what share actually resulted in a SAR? This separates "does the rule
+    # over-trigger?" (escalation_rate) from "once investigated, is it
+    # usually confirmed?" (sar_rate_of_escalated) - two different levers
+    # for tuning a rule vs. tuning the investigation process.
+    sar_rate_of_escalated = ifelse(n_escalated > 0, n_sar / n_escalated, NA_real_),
     .groups = "drop"
   ) %>%
   arrange(Type, desc(n_alerts))
